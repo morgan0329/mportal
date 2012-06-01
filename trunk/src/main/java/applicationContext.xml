@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    xsi:schemaLocation="
+    http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+    http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.0.xsd
+    http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-2.0.xsd">
+
+
+	<bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="location"><value>/WEB-INF/classes/app.properties</value></property>
+	</bean>
+
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName"><value>${jdbc.driverClassName}</value></property>
+		<property name="url"><value>${jdbc.url}</value></property>
+		<property name="username"><value>${jdbc.username}</value></property>
+		<property name="password"><value>${jdbc.password}</value></property>
+	</bean>
+
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+		<property name="dataSource">
+			<ref bean="dataSource" />
+		</property>
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">${hibernate.dialect}</prop>
+			</props>
+		</property>
+		<property name="mappingResources">
+			<list>
+				<value>com/link/po/Account.hbm.xml</value>
+				<value>com/link/po/Link.hbm.xml</value>
+				<value>com/link/po/LinkType.hbm.xml</value>
+				<value>com/link/po/Role.hbm.xml</value>
+				<value>com/link/po/MappingAccountLink.hbm.xml</value>
+			</list>
+		</property>
+	</bean>
+    <bean id="transactionManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+        <property name="sessionFactory">
+            <ref bean="sessionFactory"/>
+        </property>
+    </bean>
+
+
+
+    <bean id="accountDAO" class="com.link.dao.AccountDAO">
+        <property name="sessionFactory"><ref bean="sessionFactory" /></property>
+    </bean>
+    <bean id="linkDAO" class="com.link.dao.LinkDAO">
+        <property name="sessionFactory"><ref bean="sessionFactory" /></property>
+    </bean>
+    <bean id="linkTypeDAO" class="com.link.dao.LinkTypeDAO">
+        <property name="sessionFactory"><ref bean="sessionFactory" /></property>
+    </bean>
+    <bean id="roleDAO" class="com.link.dao.RoleDAO">
+        <property name="sessionFactory"><ref bean="sessionFactory" /></property>
+    </bean>
+    <bean id="mappingAccountLinkDAO" class="com.link.dao.MappingAccountLinkDAO">
+        <property name="sessionFactory"><ref bean="sessionFactory" /></property>
+    </bean>
+    
+	
+    <bean id="authenticationServiceTarget" class="com.link.service.AuthenticationServiceImpl">
+        <property name="accountDAO"><ref bean="accountDAO"/></property>
+        <property name="roleDAO"><ref bean="roleDAO"/></property>
+    </bean>
+    <bean id="authenticationService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="target">
+            <ref bean="authenticationServiceTarget"/>
+        </property>
+        <property name="transactionAttributes">
+            <props>
+                <prop key="get*">PROPAGATION_REQUIRED,readOnly</prop>
+                <prop key="*">PROPAGATION_REQUIRED</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean id="linkServiceTarget" class="com.link.service.LinkServiceImpl">
+        <property name="linkDAO"><ref bean="linkDAO"/></property>
+        <property name="linkTypeDAO"><ref bean="linkTypeDAO"/></property>
+        <property name="mappingAccountLinkDAO"><ref bean="mappingAccountLinkDAO"/></property>   
+    </bean>
+    <bean id="linkService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+        <property name="transactionManager">
+            <ref bean="transactionManager"/>
+        </property>
+        <property name="target">
+            <ref bean="linkServiceTarget"/>
+        </property>
+        <property name="transactionAttributes">
+            <props>
+                <prop key="get*">PROPAGATION_REQUIRED,readOnly</prop>
+                <prop key="*">PROPAGATION_REQUIRED</prop>
+            </props>
+        </property>
+    </bean>
+    
+    
+	
+	<bean id="baseAction" scope="prototype" class="com.link.action.BaseAction">
+        <property name="authenticationService"><ref bean="authenticationService"/></property>
+        <property name="linkService"><ref bean="linkService"/></property>
+    </bean>
+	<bean id="linkListAction" scope="prototype" class="com.link.action.LinkListAction">
+        <property name="authenticationService"><ref bean="authenticationService"/></property>
+        <property name="linkService"><ref bean="linkService"/></property>
+    </bean>
+
+	<bean id="loginAction" scope="prototype" class="com.link.action.LoginAction">
+        <property name="authenticationService"><ref bean="authenticationService"/></property>
+        <property name="linkService"><ref bean="linkService"/></property>
+    </bean>
+    
+	<bean id="AJAXAction" scope="prototype" class="com.link.action.AJAXAction">
+        <property name="authenticationService"><ref bean="authenticationService"/></property>
+        <property name="linkService"><ref bean="linkService"/></property>
+    </bean>
+    
+</beans>
